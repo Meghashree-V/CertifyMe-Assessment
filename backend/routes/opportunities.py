@@ -85,14 +85,14 @@ def create_opportunity():
 
 
 # ---------- US-2.5: UPDATE an opportunity ----------
-@opp_bp.route('/<int:opp_id>', methods=['PUT'])
+@opp_bp.route('/<string:opp_id>', methods=['PUT'])
 @login_required
 def update_opportunity(opp_id):
     opp = Opportunity.query.filter_by(id=opp_id, admin_id=current_user.id).first()
     if not opp:
         return jsonify({'error': 'Opportunity not found or access denied'}), 404
 
-    data = request.get_json()
+    data = request.get_json() or {}
 
     opp.name = (data.get('name') or opp.name).strip()
     opp.duration = (data.get('duration') or opp.duration).strip()
@@ -108,7 +108,7 @@ def update_opportunity(opp_id):
 
 
 # ---------- US-2.6: DELETE an opportunity ----------
-@opp_bp.route('/<int:opp_id>', methods=['DELETE'])
+@opp_bp.route('/<string:opp_id>', methods=['DELETE'])
 @login_required
 def delete_opportunity(opp_id):
     opp = Opportunity.query.filter_by(id=opp_id, admin_id=current_user.id).first()

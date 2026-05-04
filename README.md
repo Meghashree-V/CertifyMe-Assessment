@@ -1,203 +1,183 @@
-# 📘 CertifyMe — Full Stack Intern Assessment
+# Qatar Foundation Admin Portal — Sky Foundation
+
+> Tech Stack: Python · Flask · SQLite · HTML · CSS · JavaScript
+
+---
+
+## 📖 Overview
+
+This project is the **backend implementation** for the Qatar Foundation (Sky Foundation) Admin Portal. The complete Admin UI was provided as part of the assessment repository. The task was to build only the backend using **Python and Flask**, wiring it to the existing frontend without modifying any UI design, layout, or components.
+
+---
+
+## ✅ User Stories Implemented
+
+### Task 1 — Login & Signup
+
+
+| Feature | Description |
+|---------|-------------|
+| Admin Sign Up | Admins create accounts with full name, email, password, and confirm password. All fields are validated — duplicate emails are rejected, passwords must be ≥ 8 characters and match. |
+| Admin Login | Login via email and password with a generic error message. Supports **Remember Me** (30-day session). On success, loads the admin's dashboard. |
+| Forgot Password | Always shows the same success message for privacy. For registered emails, generates a secure reset token, logs the link internally, and enforces a **1-hour expiry**. |
+
+### Task 2 — Opportunity Management
+
+
+| Feature | Description |
+|---------|-------------|
+| View All Opportunities | Loads all opportunities belonging to the logged-in admin from the database. Shows name, category, duration, start date, and description. Displays an empty state when none exist. |
+| Add a New Opportunity | Modal form with required fields (name, duration, start date, description, skills, category, future opportunities) and an optional max applicants field. On submit, saves to DB and renders the card instantly — no page refresh. |
+| Opportunities Persist After Login | All opportunities are stored in SQLite and fetched fresh on each login. Admins only ever see their own data. |
+| View Opportunity Details | Each card has a View button that opens a modal showing all saved fields including skills and future opportunities. |
+| Edit an Opportunity | Edit button opens the same form modal pre-filled with existing data. On submit, updates the record via `PUT /api/opportunities/:id` and refreshes the card immediately. |
+| Delete an Opportunity | Delete button shows a confirmation prompt. On confirm, permanently removes the record via `DELETE /api/opportunities/:id`. Only the admin who created it can delete it — enforced at the backend. |
+
+---
+
+## 🗄️ Database
+
+**Database Engine:** SQLite (file: `admin.db`)
+
+SQLite was chosen for its zero-configuration setup, making it ideal for local development and assessment environments. No separate database server is required — the DB file is created automatically on first run.
+
+### Tables
+
+```
+admin
+├── id               String(36)   PRIMARY KEY   UUID v7
+├── full_name        String(150)  NOT NULL
+├── email            String(150)  UNIQUE NOT NULL
+├── password_hash    String(256)  NOT NULL
+└── created_at       DateTime
+
+opportunity
+├── id                   String(36)   PRIMARY KEY   UUID v7
+├── admin_id             String(36)   FK → admin.id
+├── name                 String(200)  NOT NULL
+├── duration             String(100)  NOT NULL
+├── start_date           String(50)   NOT NULL
+├── description          Text         NOT NULL
+├── skills               Text         NOT NULL
+├── category             String(50)   NOT NULL
+├── future_opportunities Text         NOT NULL
+├── max_applicants       Integer      NULLABLE
+└── created_at           DateTime
+
+password_reset_token
+├── id          String(36)   PRIMARY KEY   UUID v7
+├── admin_id    String(36)   FK → admin.id
+├── token       String(256)  UNIQUE NOT NULL
+├── expires_at  DateTime     NOT NULL
+└── used        Boolean      default False
+```
+
+### UUID v7
+
+All primary keys use **UUID v7** — a time-ordered UUID format (RFC 9562). UUID v7 encodes the creation timestamp in the high bits, making IDs both globally unique and naturally sortable by time. Implemented inline without any extra dependencies.
+
+---
+
+## 🗂️ Project Structure
+
+```
+Test1/
+├── run.py                        # Entry point: python run.py
+├── requirements.txt              # Python dependencies
+├── admin.db                      # SQLite database (auto-created)
+├── reset_links.log               # Internal log for password reset links
+│
+├── backend/
+│   ├── app.py                    # Flask app factory
+│   ├── config.py                 # SECRET_KEY, DB URI, session config
+│   ├── extensions.py             # SQLAlchemy + LoginManager instances
+│   ├── models.py                 # Admin, Opportunity, PasswordResetToken
+│   └── routes/
+│       ├── auth.py               # /api/auth/* endpoints
+│       └── opportunities.py      # /api/opportunities/* endpoints
+│
+└── sky/                          # Frontend (provided, not modified)
+    ├── admin.html
+    ├── admin.css
+    └── admin.js
+```
+
+---
+
+## 🔌 API Endpoints
+
+### Auth — `/api/auth`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/signup` | ❌ | Create admin account |
+| POST | `/login` | ❌ | Login, start session |
+| POST | `/logout` | ✅ | End session |
+| GET  | `/me` | ❌ | Get current session user |
+| POST | `/forgot-password` | ❌ | Generate reset link |
+
+### Opportunities — `/api/opportunities`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/` | ✅ | Get all opportunities for logged-in admin |
+| POST | `/` | ✅ | Create new opportunity |
+| PUT | `/:id` | ✅ | Update opportunity (owner only) |
+| DELETE | `/:id` | ✅ | Delete opportunity (owner only) |
 
 ---
 
 ## 🚀 Getting Started
 
-1. **Clone the provided repository**
-   ```bash
-   git clone https://github.com/Neerajvs32/Test1.git
-   ```
+### Prerequisites
+- Python 3.9+
+- pip
 
-2. **Create your own GitHub repository**
-   - Push the cloned project to your own GitHub account.
-   - Share your repository link after completing the task.
+### Install & Run
 
-3. **Development Requirement**
-   - Both Frontend and Backend must run together.
-   - The UI must remain exactly the same.
-   - ❌ Do NOT modify frontend design or components.
-   - ✅ Build the backend required for the existing UI functionality.
+```bash
+# 1. Clone the repository
+git clone https://github.com/Meghashree-V/CertifyMe-Assessment.git
+cd CertifyMe-Assessment
 
----
+# 2. Install dependencies
+pip install -r requirements.txt
 
-## 🏢 Project Overview
+# 3. Start the server
+python run.py
+```
 
-This project is part of the **CertifyMe Full Stack Intern Assessment**. The repository already contains a complete Admin UI. Your responsibility is to **build the backend and connect it with the existing frontend**.
+Open your browser at: **http://127.0.0.1:5000**
 
-### Objectives
-- Build backend APIs using Flask
-- Connect frontend with backend
-- Store and retrieve data from database
-- Make the application fully functional
-
-### 🔗 Original Repository
-[https://github.com/Neerajvs32/Test1](https://github.com/Neerajvs32/Test1)
+The SQLite database (`admin.db`) is created automatically on first run.
 
 ---
 
-## ⚙️ Tech Stack
+## 📦 Dependencies
 
-| Layer | Technology |
-|---|---|
-| Backend | Python |
-| Framework | Flask |
-| Database | SQLite / MySQL / PostgreSQL |
-| Frontend | Pre-built Admin UI |
-
----
-
-## 🧩 Features & User Stories
+```
+flask               Web framework
+flask-sqlalchemy    ORM for SQLite
+flask-login         Session-based authentication
+flask-cors          CORS headers for API requests
+werkzeug            Password hashing utilities
+python-dotenv       .env file support
+```
 
 ---
 
-### ✅ Task 1 — Authentication *(Day 1)*
+## 🔐 Security Notes
+
+- Passwords are hashed using **Werkzeug's `generate_password_hash`** (PBKDF2-SHA256)
+- Sessions are signed with a **SECRET_KEY**
+- Password reset tokens are **cryptographically random** (`secrets.token_hex(32)`) and expire after 1 hour
+- Opportunity endpoints enforce **ownership** — admins cannot edit or delete other admins' data
+- Forgot password always returns the **same response** regardless of whether the email exists (prevents user enumeration)
 
 ---
 
-#### US-1.1 — Admin Sign Up
+## 📋 Notes
 
-**Required Fields**
-- Full Name
-- Email
-- Password
-- Confirm Password
-
-**Validations**
-- All fields mandatory
-- Email must be valid
-- Password minimum 8 characters
-- Passwords must match
-- Email must be unique
-
-**Expected Result**
-- Save admin account
-- Redirect to Login page
-
----
-
-#### US-1.2 — Admin Login
-
-**Fields**
-- Email
-- Password
-- Remember Me checkbox
-
-**Rules**
-- Show generic error on failure:
-  ```
-  Invalid email or password
-  ```
-
-**Expected Result**
-- Redirect to dashboard
-- Load opportunities created by the admin
-
-**Session Handling**
-
-| Condition | Behaviour |
-|---|---|
-| Remember Me checked | Long-lived session |
-| Remember Me unchecked | Session ends when browser closes |
-
----
-
-#### US-1.3 — Forgot Password
-
-**Requirements**
-- Admin enters their email
-- Always show the same success message (regardless of whether email exists)
-
-**Behaviour**
-- Generate reset link internally
-- No email sending required
-
-**Security**
-- Reset link expires after **1 hour**
-- Expired link shows an error
-
----
-
-### ✅ Task 2 — Opportunity Management *(Day 2)*
-
-> All opportunities must be stored in the database, linked to the logged-in admin, and must never use hardcoded data.
-
----
-
-#### US-2.1 — View All Opportunities
-
-**Each opportunity card must display:**
-- Opportunity Name
-- Category
-- Duration
-- Start Date
-- Description
-
-**Rules**
-- Show only the logged-in admin's opportunities
-- Remove all demo / hardcoded cards
-- Show an empty state if no opportunities exist
-
----
-
-#### US-2.2 — Add New Opportunity
-
-**Required Fields**
-- Opportunity Name
-- Duration
-- Start Date
-- Description
-- Skills to Gain *(comma separated)*
-- Category
-- Future Opportunities
-
-**Optional Field**
-- Maximum Applicants
-
-**Category Options**
-- Technology
-- Business
-- Design
-- Marketing
-- Data Science
-- Other
-
-**Expected Result**
-- Validate all required fields
-- Save opportunity to database
-- Link opportunity to logged-in admin
-- Display immediately **without page refresh**
-
----
-
-#### US-2.3 — Opportunities Persist After Login
-
-- Opportunities must load after logout / login cycles
-- Stored only in the database — **no local storage usage**
-- Admins cannot access other admins' data
-
----
-
-#### US-2.4 — View Opportunity Details
-
-- Open a details modal
-- Show all saved fields
-- Close button available
-
----
-
-#### US-2.5 — Edit Opportunity
-
-- Edit button opens a pre-filled form
-- Apply the same validations as during creation
-- Update only the selected opportunity
-- Reflect changes instantly **without page refresh**
-
----
-
-#### US-2.6 — Delete Opportunity
-
-- Show a confirmation dialog before deletion
-- Delete permanently from the database
-- Remove from UI immediately **without page refresh**
-- Only the creator admin can delete their own opportunity
+- The frontend (`sky/`) was provided as part of the assessment and **was not redesigned**
+- Only `admin.js` was modified to wire the existing UI to the new API endpoints
+- All opportunity data is loaded from the database — no hardcoded cards exist in the HTML

@@ -390,9 +390,9 @@ function renderOpportunityCard(opp) {
         <div class="opportunity-footer">
             <span class="applicants-count">${opp.max_applicants ? opp.max_applicants + ' max applicants' : 'Open applicants'}</span>
             <div style="display:flex;gap:8px;">
-                <button class="view-course-btn" style="width:auto;padding:8px 14px;" onclick="viewOppDetails(${opp.id})">View</button>
-                <button style="width:auto;padding:8px 14px;background:#2d7a50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="editOpp(${opp.id})">Edit</button>
-                <button style="width:auto;padding:8px 14px;background:#e53e3e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="deleteOpp(${opp.id}, this)">Delete</button>
+                <button class="view-course-btn" style="width:auto;padding:8px 14px;" onclick="viewOppDetails('${opp.id}')">View</button>
+                <button style="width:auto;padding:8px 14px;background:#2d7a50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="editOpp('${opp.id}')">Edit</button>
+                <button style="width:auto;padding:8px 14px;background:#e53e3e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="deleteOpp('${opp.id}', this)">Delete</button>
             </div>
         </div>
     `;
@@ -404,8 +404,14 @@ let opportunitiesCache = [];
 
 function loadOpportunities() {
     fetch('/api/opportunities', { credentials: 'include' })
-        .then(r => r.json())
-        .then(opps => {
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            // Guard: if not authenticated or response is not an array, bail out safely
+            if (!ok || !Array.isArray(data)) {
+                if (!ok) showToast((data && data.error) || 'Session expired. Please log in again.');
+                return;
+            }
+            const opps = data;
             opportunitiesCache = opps;
             const grid = document.getElementById('opportunitiesGrid');
             const emptyState = document.getElementById('oppEmptyState');
@@ -456,9 +462,13 @@ function editOpp(id) {
 function deleteOpp(id, btn) {
     if (!confirm('Are you sure you want to delete this opportunity? This cannot be undone.')) return;
     fetch(`/api/opportunities/${id}`, { method: 'DELETE', credentials: 'include' })
-        .then(r => r.json())
-        .then(data => {
-            // Remove card from DOM
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                showToast(data.error || 'Failed to delete. Try again.');
+                return;
+            }
+            // Remove card from DOM only after confirmed server success
             const card = document.querySelector(`.opportunity-card[data-id="${id}"]`);
             if (card) card.remove();
             // Update cache

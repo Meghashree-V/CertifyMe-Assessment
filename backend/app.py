@@ -26,7 +26,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return Admin.query.get(int(user_id))
+        return Admin.query.get(user_id)
 
     # Register blueprints
     from backend.routes.auth import auth_bp
