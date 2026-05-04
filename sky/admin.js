@@ -96,9 +96,6 @@ function showDashboard(fullName, email) {
     if (window.innerWidth <= 768) {
         document.getElementById('menuToggle').style.display = 'flex';
     }
-
-    // Load real opportunities from DB
-    loadOpportunities();
 }
 
 function handleLogout() {
