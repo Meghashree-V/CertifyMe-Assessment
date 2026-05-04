@@ -335,6 +335,13 @@ document.getElementById('collaboratorCoursesModal').addEventListener('click', fu
 
 // ===== OPPORTUNITY MODAL =====
 function openOpportunityModal() {
+    const isEdit = editingOppId !== null;
+    // Update modal title
+    const modalTitle = document.querySelector('#opportunityModal .modal-header h3');
+    if (modalTitle) modalTitle.textContent = isEdit ? 'Edit Opportunity' : 'Add New Opportunity';
+    // Update submit button
+    const submitBtn = document.querySelector('#opportunityForm button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = isEdit ? 'Update Opportunity' : 'Create Opportunity';
     document.getElementById('opportunityModal').classList.add('active');
 }
 
@@ -386,7 +393,7 @@ function renderOpportunityCard(opp) {
             <span class="applicants-count">${opp.max_applicants ? opp.max_applicants + ' max applicants' : 'Open applicants'}</span>
             <div style="display:flex;gap:8px;">
                 <button class="view-course-btn" style="width:auto;padding:8px 14px;" onclick="viewOppDetails(${opp.id})">View</button>
-                <button style="width:auto;padding:8px 14px;background:var(--qf-primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="editOpp(${opp.id})">Edit</button>
+                <button style="width:auto;padding:8px 14px;background:#2d7a50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="editOpp(${opp.id})">Edit</button>
                 <button style="width:auto;padding:8px 14px;background:#e53e3e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;" onclick="deleteOpp(${opp.id}, this)">Delete</button>
             </div>
         </div>
