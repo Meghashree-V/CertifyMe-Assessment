@@ -24,7 +24,9 @@ def create_app():
 
     # Register blueprints
     from backend.routes.auth import auth_bp
+    from backend.routes.opportunities import opp_bp
     app.register_blueprint(auth_bp)
+    app.register_blueprint(opp_bp)
 
     # Serve the frontend UI
     @app.route('/')
