@@ -18,6 +18,12 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
 
+    # Return JSON 401 for API routes instead of HTML redirect
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        from flask import jsonify
+        return jsonify({'error': 'Not authenticated. Please log in.'}), 401
+
     @login_manager.user_loader
     def load_user(user_id):
         return Admin.query.get(int(user_id))
@@ -58,6 +64,15 @@ def create_app():
             <a href="/" style="color:#2980b9">← Back to Login</a>
             </body></html>
         ''', 200
+
+    # Add a debug route to check auth status
+    @app.route('/api/debug/whoami')
+    def whoami():
+        from flask_login import current_user
+        from flask import jsonify
+        if current_user.is_authenticated:
+            return jsonify({'logged_in': True, 'admin_id': current_user.id, 'email': current_user.email})
+        return jsonify({'logged_in': False}), 401
 
     # Create database tables on first run
     with app.app_context():
