@@ -6,6 +6,9 @@
 *.sqlite
 *.sqlite3
 
+# Log files
+reset_links.log
+
 # Flask instance folder (contains DB)
 instance/
 

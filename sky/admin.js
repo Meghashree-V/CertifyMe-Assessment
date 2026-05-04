@@ -66,14 +66,13 @@ function checkStrength(val) {
 }
 
 // ===== SHOW DASHBOARD =====
-function showDashboard(email) {
+function showDashboard(fullName, email) {
     document.getElementById('authWrapper').style.display = 'none';
     document.getElementById('dashboardWrapper').classList.add('active');
     document.body.style.alignItems = 'stretch';
 
-    // Personalize
-    const name = email.split('@')[0];
-    const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+    // Personalize with real name from DB
+    const displayName = fullName || (email ? email.split('@')[0] : 'Admin');
     document.getElementById('dashName').textContent = displayName;
     document.getElementById('dashAvatar').textContent = displayName.substring(0, 2).toUpperCase();
 
@@ -84,11 +83,14 @@ function showDashboard(email) {
 }
 
 function handleLogout() {
-    document.getElementById('dashboardWrapper').classList.remove('active');
-    document.getElementById('authWrapper').style.display = 'flex';
-    document.body.style.alignItems = '';
-    showToast('Signed out successfully');
-    showPage('loginPage');
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(() => {
+            document.getElementById('dashboardWrapper').classList.remove('active');
+            document.getElementById('authWrapper').style.display = 'flex';
+            document.body.style.alignItems = '';
+            showToast('Signed out successfully');
+            showPage('loginPage');
+        });
 }
 
 // ===== NAV ITEMS =====
@@ -639,17 +641,34 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     const captchaInput = document.getElementById('loginCaptchaInput').value.trim();
+    const remember = document.querySelector('#loginForm .remember-me input[type="checkbox"]')?.checked || false;
 
     if (!email || !isValidEmail(email)) { showError('loginEmailErr'); document.getElementById('loginEmail').classList.add('error'); valid = false; }
-    if (!password) { showError('loginPasswordErr','Please enter your password'); document.getElementById('loginPassword').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('loginCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.login) { showError('loginCaptchaErr','Captcha does not match. Please try again.'); valid = false; generateCaptcha('login'); }
+    if (!password) { showError('loginPasswordErr', 'Please enter your password'); document.getElementById('loginPassword').classList.add('error'); valid = false; }
+    if (!captchaInput) { showError('loginCaptchaErr', 'Please enter the captcha code'); valid = false; }
+    else if (captchaInput !== captchas.login) { showError('loginCaptchaErr', 'Captcha does not match. Please try again.'); valid = false; generateCaptcha('login'); }
 
     if (!valid) { shakeForm('loginForm'); return; }
 
-    showToast('Login successful! Redirecting...');
-    setTimeout(() => showDashboard(email), 1200);
-    generateCaptcha('login');
+    fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, remember })
+    })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+        if (ok) {
+            showToast('Login successful! Redirecting...');
+            generateCaptcha('login');
+            setTimeout(() => showDashboard(data.admin.full_name, data.admin.email), 1000);
+        } else {
+            showError('loginPasswordErr', data.error || 'Invalid email or password');
+            shakeForm('loginForm');
+            generateCaptcha('login');
+        }
+    })
+    .catch(() => { showToast('Server error. Please try again.'); });
 });
 
 // ===== SIGNUP =====
@@ -667,14 +686,35 @@ document.getElementById('signupForm').addEventListener('submit', function(e) {
     if (!email || !isValidEmail(email)) { showError('signupEmailErr'); document.getElementById('signupEmail').classList.add('error'); valid = false; }
     if (!password || password.length < 8) { showError('signupPasswordErr'); document.getElementById('signupPassword').classList.add('error'); valid = false; }
     if (!confirmPassword || password !== confirmPassword) { showError('signupConfirmPasswordErr'); document.getElementById('signupConfirmPassword').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('signupCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.signup) { showError('signupCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('signup'); }
+    if (!captchaInput) { showError('signupCaptchaErr', 'Please enter the captcha code'); valid = false; }
+    else if (captchaInput !== captchas.signup) { showError('signupCaptchaErr', 'Captcha does not match.'); valid = false; generateCaptcha('signup'); }
 
     if (!valid) { shakeForm('signupForm'); return; }
-    showToast('Account created successfully!');
-    generateCaptcha('signup');
-    this.reset(); checkStrength('');
-    setTimeout(() => showPage('loginPage'), 1500);
+
+    fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ full_name: name, email, password, confirm_password: confirmPassword })
+    })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+        if (ok) {
+            showToast('Account created successfully!');
+            generateCaptcha('signup');
+            this.reset(); checkStrength('');
+            setTimeout(() => showPage('loginPage'), 1500);
+        } else {
+            if (data.error && data.error.toLowerCase().includes('email')) {
+                showError('signupEmailErr', data.error);
+                document.getElementById('signupEmail').classList.add('error');
+            } else {
+                showToast(data.error || 'Signup failed. Try again.');
+            }
+            shakeForm('signupForm');
+        }
+    })
+    .catch(() => { showToast('Server error. Please try again.'); });
 });
 
 // ===== FORGOT =====
@@ -686,13 +726,26 @@ document.getElementById('forgotForm').addEventListener('submit', function(e) {
     const captchaInput = document.getElementById('forgotCaptchaInput').value.trim();
 
     if (!email || !isValidEmail(email)) { showError('forgotEmailErr'); document.getElementById('forgotEmail').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('forgotCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.forgot) { showError('forgotCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('forgot'); }
+    if (!captchaInput) { showError('forgotCaptchaErr', 'Please enter the captcha code'); valid = false; }
+    else if (captchaInput !== captchas.forgot) { showError('forgotCaptchaErr', 'Captcha does not match.'); valid = false; generateCaptcha('forgot'); }
 
     if (!valid) { shakeForm('forgotForm'); return; }
-    showToast('Reset link sent to your email!');
-    generateCaptcha('forgot');
-    this.reset();
+
+    fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email })
+    })
+    .then(() => {
+        showToast('If that email is registered, a reset link has been sent.');
+        generateCaptcha('forgot');
+        this.reset();
+    })
+    .catch(() => {
+        showToast('If that email is registered, a reset link has been sent.');
+        this.reset();
+    });
 });
 
 // Clear errors on input
@@ -709,3 +762,14 @@ window.addEventListener('resize', () => {
     const toggle = document.getElementById('menuToggle');
     if (toggle) toggle.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 });
+
+// ===== SESSION RESTORE =====
+// On page load, check if admin is already logged in
+fetch('/api/auth/me', { credentials: 'include' })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.full_name) {
+            showDashboard(data.full_name, data.email);
+        }
+    })
+    .catch(() => {});

@@ -1,8 +1,9 @@
 import re
 import secrets
+import logging
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -127,8 +128,15 @@ def forgot_password():
             db.session.add(reset_token)
             db.session.commit()
 
-            # Log the reset link to the console (no email sending needed)
-            print(f"\n[PASSWORD RESET LINK] http://localhost:5000/reset-password/{token}\n")
+            # Log the reset link internally (no email sending needed)
+            reset_link = f"http://localhost:5000/reset-password/{token}"
+            current_app.logger.warning(f"[RESET LINK] Email: {email} | Link: {reset_link}")
+
+            # Write to log file for easy access
+            import os
+            log_path = os.path.join(os.path.dirname(__file__), '..', '..', 'reset_links.log')
+            with open(log_path, 'a') as f:
+                f.write(f"\n[{datetime.utcnow()}] Email: {email}\nLink: {reset_link}\n")
 
     return jsonify({'message': 'If that email is registered, a reset link has been sent'}), 200
 
